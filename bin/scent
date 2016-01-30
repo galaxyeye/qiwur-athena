@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+SCENT_JAVA_HOME=/usr/lib/jvm/java-7-sun
+SPARK_HOME=/home/vincent/programs/spark-1.4.1
+SCENT_VERSION=1.0.0
+
+# resolve links - $0 may be a softlink
+THIS="$0"
+while [ -h "$THIS" ]; do
+  ls=`ls -ld "$THIS"`
+  link=`expr "$ls" : '.*-> \(.*\)$'`
+  if expr "$link" : '.*/.*' > /dev/null; then
+    THIS="$link"
+  else
+    THIS=`dirname "$THIS"`/"$link"
+  fi
+done
+
+# some directories
+THIS_DIR=`dirname "$THIS"`
+SCENT_HOME=`cd "$THIS_DIR/.." ; pwd`
+DEFAULT_JAVA_HOME=/usr/lib/jvm/default-java
+
+# some Java parameters
+if [ -d "$SCENT_JAVA_HOME" ]; then
+  JAVA_HOME=$SCENT_JAVA_HOME
+elif [ -d "$DEFAULT_JAVA_HOME" ]; then
+  JAVA_HOME=$DEFAULT_JAVA_HOME
+fi
+
+if [ ! -d "$JAVA_HOME" ]; then
+  echo "Error: JAVA_HOME is not set."
+  exit 1
+fi
+
+# if no args specified, show usage
+if [ $# = 0 ]; then
+  echo "Usage: scent COMMAND"
+  echo "where COMMAND is one of:"
+  echo " simple-app        run SimpleApp"
+  echo " or"
+  echo " CLASSNAME  run the class named CLASSNAME"
+  echo "Most commands print help when invoked w/o parameters."
+  exit 1
+fi
+
+# get arguments
+COMMAND=$1
+shift
+
+# figure out which class to run
+if [ "$COMMAND" = "simple-app" ] ; then
+  MODULE=scent-ml
+  CLASS=org.qiwur.scent.ml.SimpleApp
+  JAR=$MODULE/target/$MODULE-$SCENT_VERSION.jar
+else
+  CLASS=$COMMAND
+fi
+
+. "$SPARK_HOME"/bin/load-spark-env.sh
+
+SPARK_MASTER=${MASTER:-"local[*]"}
+
+exec "$SPARK_HOME"/bin/spark-submit \
+  --master $SPARK_MASTER \
+  --class $CLASS \
+  "$JAR" \
+  "$@"
